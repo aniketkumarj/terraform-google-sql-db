@@ -15,9 +15,7 @@
  */
 
 locals {
-  master_instance_name = var.random_instance_name ? "${var.name}-${random_id.suffix[0].hex}" : var.name
-
-  default_user_host        = "%"
+  master_instance_name     = var.random_instance_name ? "${var.name}-${random_id.suffix[0].hex}" : var.name
   ip_configuration_enabled = length(keys(var.ip_configuration)) > 0 ? true : false
 
   ip_configurations = {
@@ -81,6 +79,14 @@ resource "google_sql_database_instance" "default" {
         query_string_length     = lookup(insights_config.value, "query_string_length", 1024)
         record_application_tags = lookup(insights_config.value, "record_application_tags", false)
         record_client_address   = lookup(insights_config.value, "record_client_address", false)
+      }
+    }
+    dynamic "deny_maintenance_period" {
+      for_each = var.deny_maintenance_period
+      content {
+        end_date   = lookup(deny_maintenance_period.value, "end_date", null)
+        start_date = lookup(deny_maintenance_period.value, "start_date", null)
+        time       = lookup(deny_maintenance_period.value, "time", null)
       }
     }
     dynamic "ip_configuration" {

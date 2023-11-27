@@ -94,6 +94,7 @@ variable "disk_autoresize_limit" {
 
 variable "disk_size" {
   description = "The disk size for the master instance."
+  type        = number
   default     = 10
 }
 
@@ -125,6 +126,16 @@ variable "maintenance_window_update_track" {
   description = "The update track of maintenance window for the master instance maintenance.Can be either `canary` or `stable`."
   type        = string
   default     = "canary"
+}
+
+variable "deny_maintenance_period" {
+  description = "The Deny Maintenance Period fields to prevent automatic maintenance from occurring during a 90-day time period. See [more details](https://cloud.google.com/sql/docs/sqlserver/maintenance)"
+  type = list(object({
+    end_date   = string
+    start_date = string
+    time       = string
+  }))
+  default = []
 }
 
 variable "database_flags" {

@@ -77,6 +77,14 @@ resource "google_sql_database_instance" "default" {
         }
       }
     }
+    dynamic "deny_maintenance_period" {
+      for_each = var.deny_maintenance_period
+      content {
+        end_date   = lookup(deny_maintenance_period.value, "end_date", null)
+        start_date = lookup(deny_maintenance_period.value, "start_date", null)
+        time       = lookup(deny_maintenance_period.value, "time", null)
+      }
+    }
     dynamic "ip_configuration" {
       for_each = [local.ip_configurations[local.ip_configuration_enabled ? "enabled" : "disabled"]]
       content {
@@ -103,6 +111,19 @@ resource "google_sql_database_instance" "default" {
         query_string_length     = lookup(insights_config.value, "query_string_length", 1024)
         record_application_tags = lookup(insights_config.value, "record_application_tags", false)
         record_client_address   = lookup(insights_config.value, "record_client_address", false)
+      }
+    }
+
+    dynamic "password_validation_policy" {
+      for_each = var.password_validation_policy_config != null ? [var.password_validation_policy_config] : []
+
+      content {
+        enable_password_policy      = true
+        min_length                  = lookup(password_validation_policy.value, "min_length", 8)
+        complexity                  = lookup(password_validation_policy.value, "complexity", "COMPLEXITY_DEFAULT")
+        reuse_interval              = lookup(password_validation_policy.value, "reuse_interval", null)
+        disallow_username_substring = lookup(password_validation_policy.value, "disallow_username_substring", true)
+        password_change_interval    = lookup(password_validation_policy.value, "password_change_interval", null)
       }
     }
 
@@ -177,7 +198,7 @@ resource "random_password" "user-password" {
   }
 
   length     = 32
-  special    = false
+  special    = true
   depends_on = [null_resource.module_depends_on, google_sql_database_instance.default]
 }
 
@@ -188,7 +209,7 @@ resource "random_password" "additional_passwords" {
   }
 
   length     = 32
-  special    = false
+  special    = true
   depends_on = [null_resource.module_depends_on, google_sql_database_instance.default]
 }
 
@@ -220,20 +241,6 @@ resource "google_sql_user" "additional_users" {
   deletion_policy = var.user_deletion_policy
 }
 
-resource "google_project_iam_member" "iam_binding" {
-  for_each = {
-    for iu in local.iam_users :
-    "${iu.email} ${iu.is_account_sa}" => iu
-  }
-  project = var.project_id
-  role    = "roles/cloudsql.instanceUser"
-  member = each.value.is_account_sa ? (
-    "serviceAccount:${each.value.email}"
-    ) : (
-    "user:${each.value.email}"
-  )
-}
-
 resource "google_sql_user" "iam_account" {
   for_each = {
     for iu in local.iam_users :
@@ -250,7 +257,6 @@ resource "google_sql_user" "iam_account" {
 
   depends_on = [
     null_resource.module_depends_on,
-    google_project_iam_member.iam_binding,
   ]
   deletion_policy = var.user_deletion_policy
 }

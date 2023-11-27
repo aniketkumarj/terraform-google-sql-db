@@ -97,6 +97,7 @@ variable "disk_autoresize_limit" {
 
 variable "disk_size" {
   description = "The disk size for the master instance."
+  type        = number
   default     = 10
 }
 
@@ -145,6 +146,16 @@ variable "user_labels" {
   default     = {}
 }
 
+variable "deny_maintenance_period" {
+  description = "The Deny Maintenance Period fields to prevent automatic maintenance from occurring during a 90-day time period. See [more details](https://cloud.google.com/sql/docs/postgres/maintenance)"
+  type = list(object({
+    end_date   = string
+    start_date = string
+    time       = string
+  }))
+  default = []
+}
+
 variable "backup_configuration" {
   description = "The backup_configuration settings subblock for the database setings"
   type = object({
@@ -177,6 +188,18 @@ variable "insights_config" {
   default = null
 }
 
+variable "password_validation_policy_config" {
+  description = "The password validation policy settings for the database instance."
+  type = object({
+    min_length                  = number
+    complexity                  = string
+    reuse_interval              = number
+    disallow_username_substring = bool
+    password_change_interval    = string
+  })
+  default = null
+}
+
 variable "ip_configuration" {
   description = "The ip configuration for the master instances."
   type = object({
@@ -200,6 +223,7 @@ variable "read_replicas" {
   description = "List of read replicas to create. Encryption key is required for replica in different region. For replica in same region as master set encryption_key_name = null"
   type = list(object({
     name                  = string
+    name_override         = optional(string)
     tier                  = string
     availability_type     = string
     zone                  = string
